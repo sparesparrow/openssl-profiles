@@ -1,0 +1,20 @@
+{
+  "certificate_number": "4985",
+  "openssl_version": "3.1.2",
+  "fips_provider_version": "3.1.2",
+  "issue_date": "2025-03-10",
+  "expiry_date": "2030-03-10",
+  "security_level": "Level 1",
+  "validated_algorithms": [
+    "AES-128-GCM", "AES-256-GCM",
+    "SHA-256", "SHA-384", "SHA-512",
+    "RSA-2048", "RSA-3072", "RSA-4096",
+    "ECDSA-P256", "ECDSA-P384",
+    "HMAC-SHA256", "DRBG-CTR"
+  ],
+  "validated_platforms": [
+    "Linux x86_64 (RHEL 8, 9)",
+    "Windows x86_64 (Server 2019+)"
+  ],
+  "nist_cmvp_url": "https://csrc.nist.gov/projects/cryptographic-module-validation-program/certificate/4985"
+}
