@@ -7,10 +7,22 @@ compiler.libcxx=libstdc++11
 build_type=Release
 
 [options]
-openssl*:shared=True
-openssl*:enable_fips=True
-openssl*:enable_quic=True
+openssl/*:shared=True
+openssl/*:fPIC=True
+openssl/*:enable_fips=True
+openssl/*:enable_ssl3=True
+openssl/*:enable_weak_ssl_ciphers=False
+openssl/*:enable_quic=True
 
 [conf]
+tools.system.package_manager:mode=install
+tools.system.package_manager:sudo=True
+tools.build:jobs=4
 tools.cmake.cmaketoolchain:generator=Ninja
 
+[buildenv]
+CC=gcc-11
+CXX=g++-11
+CFLAGS=-O3 -march=native -mtune=native -flto
+CXXFLAGS=-O3 -march=native -mtune=native -flto
+LDFLAGS=-Wl,--as-needed -Wl,--gc-sections -flto

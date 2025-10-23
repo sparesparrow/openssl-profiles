@@ -6,6 +6,20 @@ compiler.version=15
 compiler.libcxx=libc++
 build_type=Release
 
+[options]
+openssl/*:shared=True
+openssl/*:enable_fips=True
+openssl/*:enable_ssl3=True
+openssl/*:enable_weak_ssl_ciphers=False
+
 [conf]
+tools.build:jobs=4
+tools.cmake.cmaketoolchain:generator=Ninja
 tools.system.package_manager:mode=install
 
+[buildenv]
+CC=clang
+CXX=clang++
+CFLAGS=-O3 -march=native -mtune=native -flto
+CXXFLAGS=-O3 -march=native -mtune=native -flto
+LDFLAGS=-flto -Wl,-dead_strip

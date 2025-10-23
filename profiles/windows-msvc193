@@ -6,5 +6,21 @@ compiler.version=193
 compiler.runtime=dynamic
 build_type=Release
 
+[options]
+openssl/*:shared=True
+openssl/*:enable_fips=True
+openssl/*:enable_ssl3=True
+openssl/*:enable_weak_ssl_ciphers=False
+
 [conf]
+tools.microsoft.msbuild:vs_version=17
+tools.microsoft.msbuild:max_cpu_count=4
+tools.cmake.cmaketoolchain:generator=Visual Studio 17 2022
 tools.system.package_manager:mode=install
+
+[buildenv]
+CC=cl
+CXX=cl
+CFLAGS=/O2 /GL /arch:AVX2
+CXXFLAGS=/O2 /GL /arch:AVX2
+LDFLAGS=/LTCG /OPT:REF /OPT:ICF

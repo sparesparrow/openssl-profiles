@@ -1,0 +1,219 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - "conanfile.py"
+      - "openssl_profiles/**"
+      - "profiles/**"
+      - "fips/**"
+      - "config/**"
+      - "test_package/**"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "conanfile.py"
+      - "openssl_profiles/**"
+      - "profiles/**"
+      - "fips/**"
+      - "config/**"
+      - "test_package/**"
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to test on'
+        required: false
+        default: 'linux-gcc11'
+        type: choice
+        options:
+          - linux-gcc11
+          - linux-clang15
+          - windows-msvc2022
+          - macos-clang14
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test:
+    name: Test Package
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+        exclude:
+          - os: windows-latest
+            python-version: "3.12"
+          - os: macos-latest
+            python-version: "3.12"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install Conan
+        run: |
+          pip install conan==2.0.17
+          conan --version
+
+      - name: Configure Conan
+        run: |
+          conan profile detect --force
+          conan config set general.revisions_enabled=1
+          conan config set general.default_package_id_mode=full_version_mode
+
+      - name: Add Conan remotes
+        run: |
+          conan remote add sparesparrow-conan ${{ secrets.CONAN_REPOSITORY_URL }} || true
+          conan remote login sparesparrow-conan ${{ secrets.CONAN_LOGIN_USERNAME }} --password ${{ secrets.CONAN_PASSWORD }} || true
+
+      - name: Test Python module import
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'openssl_profiles')
+          try:
+              import openssl_profiles
+              print('✅ openssl_profiles module imported successfully')
+              print(f'Version: {openssl_profiles.__version__}')
+          except ImportError as e:
+              print(f'❌ Import failed: {e}')
+              sys.exit(1)
+          "
+
+      - name: Test profile deployment
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'openssl_profiles')
+          from openssl_profiles import deploy_openssl_profiles, list_openssl_profiles
+          
+          # Test deployment
+          deploy_openssl_profiles(force=True, verbose=True)
+          
+          # Test listing
+          profiles = list_openssl_profiles()
+          print(f'Found {len(profiles)} profiles: {profiles}')
+          "
+
+      - name: Test SBOM generation
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'openssl_profiles')
+          from openssl_profiles import generate_openssl_sbom
+          
+          # Test SBOM generation
+          sbom = generate_openssl_sbom('openssl-profiles', '2.0.1', False)
+          print('✅ SBOM generated successfully')
+          print(f'BOM format: {sbom[\"bomFormat\"]}')
+          print(f'Spec version: {sbom[\"specVersion\"]}')
+          "
+
+      - name: Test FIPS SBOM generation
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, 'openssl_profiles')
+          from openssl_profiles import generate_openssl_sbom
+          
+          # Test FIPS SBOM generation
+          sbom = generate_openssl_sbom('openssl-profiles', '2.0.1', True, '4985')
+          print('✅ FIPS SBOM generated successfully')
+          print(f'FIPS validated: {any(p[\"name\"] == \"openssl:fips_validated\" for p in sbom[\"metadata\"][\"component\"][\"properties\"])}')
+          "
+
+      - name: Create and test Conan package
+        run: |
+          conan create . --build=missing --test-folder=test_package
+
+      - name: Verify package contents
+        run: |
+          conan list "*" --format=json | jq '.[] | select(.name == "openssl-profiles")'
+          
+          # Check if package contains expected files
+          PACKAGE_PATH=$(conan cache path openssl-profiles/2.0.1@sparesparrow/stable)
+          echo "Package path: $PACKAGE_PATH"
+          
+          if [ -d "$PACKAGE_PATH/profiles" ]; then
+            echo "✅ Profiles directory found"
+            find "$PACKAGE_PATH/profiles" -name "*.profile" | wc -l | xargs -I {} echo "Found {} profile files"
+          else
+            echo "❌ Profiles directory not found"
+            exit 1
+          fi
+          
+          if [ -d "$PACKAGE_PATH/fips" ]; then
+            echo "✅ FIPS directory found"
+            if [ -f "$PACKAGE_PATH/fips/certificates/certificate-4985.json" ]; then
+              echo "✅ FIPS certificate #4985 found"
+            else
+              echo "❌ FIPS certificate #4985 not found"
+              exit 1
+            fi
+          else
+            echo "❌ FIPS directory not found"
+            exit 1
+          fi
+          
+          if [ -d "$PACKAGE_PATH/openssl_profiles" ]; then
+            echo "✅ Python module directory found"
+          else
+            echo "❌ Python module directory not found"
+            exit 1
+          fi
+
+  publish:
+    name: Publish Package
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install Conan
+        run: |
+          pip install conan==2.0.17
+          conan --version
+
+      - name: Configure Conan
+        run: |
+          conan profile detect --force
+          conan config set general.revisions_enabled=1
+          conan config set general.default_package_id_mode=full_version_mode
+
+      - name: Add Conan remotes
+        run: |
+          conan remote add sparesparrow-conan ${{ secrets.CONAN_REPOSITORY_URL }}
+          conan remote login sparesparrow-conan ${{ secrets.CONAN_LOGIN_USERNAME }} --password ${{ secrets.CONAN_PASSWORD }}
+
+      - name: Create package
+        run: |
+          conan create . --build=missing
+
+      - name: Upload package
+        run: |
+          conan upload openssl-profiles/2.0.1@sparesparrow/stable -r=sparesparrow-conan --all --confirm
+
+      - name: Verify upload
+        run: |
+          conan search openssl-profiles/2.0.1@sparesparrow/stable -r=sparesparrow-conan

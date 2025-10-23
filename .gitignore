@@ -8,7 +8,6 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
 develop-eggs/
 dist/
 downloads/
@@ -25,6 +24,10 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Build directories (generic)
+build/
+build-*/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -182,9 +185,9 @@ cython_debug/
 .abstra/
 
 # Visual Studio Code
-#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
+#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
 #  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#  and can be added to the global gitignore or merged into this file. However, if you prefer, 
+#  and can be added to the global gitignore or merged into this file. However, if you prefer,
 #  you could uncomment the following to ignore the entire vscode folder
 # .vscode/
 
@@ -201,7 +204,70 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Conan 2.x
+#  Conan 2.x specific files and directories
+.conan2/
+conanfile.txt
+conan.lock
+conanfile.lock
+conan_imports_manifest.txt
+conanbuildinfo.*
+conaninfo.txt
+conanmanifest.txt
+conanfile.pyc
+conanfile.cpython-*.pyc
+
+# Conan build artifacts
+build/
+conanbuild/
+conanrun/
+conanbuildenv/
+conanrunenv/
+deactivate_conanbuild.*
+deactivate_conanrun.*
+
+# Conan test package artifacts
+test_package/build/
+test_package/conanbuild/
+test_package/conanrun/
+test_package/conanbuildenv/
+test_package/conanrunenv/
+test_package/deactivate_conanbuild.*
+test_package/deactivate_conanrun.*
+
+# Conan cache and temporary files
+.conan/
+.conan2/
+conan_cache/
+conan_data/
+conan_imports_manifest.txt
+
+# Conan profiles (if generated)
+profiles/*.profile.bak
+profiles/*.profile.tmp
+
+# Conan 2.x specific metadata
+conan_imports_manifest.txt
+conanbuildinfo.*
+conaninfo.txt
+conanmanifest.txt
+
+# Conan 2.x test artifacts
+test_package/metadata/
+test_package/*.log
+
+# FIPS compliance artifacts (generated)
+fips-compliance-report.json
+openssl-fips-sbom.json
+fips_compliance_demo.py
+
+# Integration test artifacts
+integration_test.sh
+*.log
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+.cursor/
