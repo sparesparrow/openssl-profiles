@@ -1,0 +1,120 @@
+---
+globs: ["**/*.c", "**/*.h", "**/*.cpp", "**/*.hpp"]
+description: "OpenSSL-specific code review prompt template"
+alwaysApply: false
+---
+
+# OpenSSL Code Review Assistant
+
+Please review this OpenSSL code for best practices, potential bugs, security issues, and performance improvements:
+
+```{{language}}
+{{code}}
+```
+
+## 🔍 **OpenSSL-Specific Review Focus**
+
+### Component Context
+- **Component**: {{component}} (openssl|libcrypto|libssl|openssl-tools|openssl-conan-base)
+- **FIPS Compliance**: {{fips_compliance}} (true|false)
+- **Conan Package**: {{conan_package}}
+- **Build Target**: {{build_target}} (release|debug|fips)
+
+### Security Review
+- [ ] **FIPS 140-3 Compliance**: Verify all cryptographic operations use approved algorithms
+- [ ] **Memory Safety**: Check for buffer overflows, use-after-free, double-free
+- [ ] **Input Validation**: Ensure all inputs are properly validated and sanitized
+- [ ] **Error Handling**: Verify errors don't leak sensitive information
+- [ ] **Key Management**: Check proper key generation, storage, and cleanup
+
+### OpenSSL API Usage
+- [ ] **Error Checking**: All OpenSSL API calls should check return values
+- [ ] **Resource Cleanup**: Proper cleanup of OpenSSL resources (EVP contexts, BIOs, etc.)
+- [ ] **Memory Management**: Use `OPENSSL_cleanse()` for sensitive data
+- [ ] **Thread Safety**: Ensure thread-safe usage of OpenSSL APIs
+- [ ] **Deprecated APIs**: Avoid deprecated OpenSSL functions
+
+### Performance Considerations
+- [ ] **Algorithm Selection**: Use appropriate cryptographic algorithms for the use case
+- [ ] **Memory Usage**: Minimize memory allocations and use stack when possible
+- [ ] **CPU Usage**: Consider hardware acceleration when available
+- [ ] **Caching**: Implement appropriate caching for expensive operations
+
+### Code Quality
+- [ ] **Naming Conventions**: Follow OpenSSL naming patterns (`OPENSSL_*`, `ossl_*`)
+- [ ] **Documentation**: Include comprehensive comments for public APIs
+- [ ] **Error Messages**: Provide meaningful error messages for debugging
+- [ ] **Testing**: Include appropriate unit tests for new functionality
+
+## 🚨 **Common OpenSSL Issues to Check**
+
+### Memory Management
+```c
+// ❌ Bad: Missing error checking
+EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
+
+// ✅ Good: Proper error checking
+EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+if (ctx == NULL) {
+    return -1;
+}
+if (EVP_DigestInit_ex(ctx, EVP_sha256(), NULL) != 1) {
+    EVP_MD_CTX_free(ctx);
+    return -1;
+}
+```
+
+### FIPS Compliance
+```c
+// ❌ Bad: Using non-FIPS approved algorithm
+EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+EVP_EncryptInit_ex(ctx, EVP_des_ede3_cbc(), NULL, key, iv);
+
+// ✅ Good: Using FIPS approved algorithm
+EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
+```
+
+### Error Handling
+```c
+// ❌ Bad: Generic error handling
+if (some_openssl_function() != 1) {
+    fprintf(stderr, "Error occurred\n");
+    return -1;
+}
+
+// ✅ Good: Specific error handling
+if (some_openssl_function() != 1) {
+    unsigned long err = ERR_get_error();
+    fprintf(stderr, "OpenSSL error: %s\n", ERR_error_string(err, NULL));
+    return -1;
+}
+```
+
+## 📋 **Review Checklist**
+
+### Pre-Review
+- [ ] Understand the component's role in the OpenSSL ecosystem
+- [ ] Check if FIPS compliance is required
+- [ ] Review related Conan package configuration
+- [ ] Understand the build target requirements
+
+### During Review
+- [ ] Check for OpenSSL-specific security vulnerabilities
+- [ ] Verify proper API usage patterns
+- [ ] Ensure FIPS compliance (if required)
+- [ ] Validate error handling and resource cleanup
+- [ ] Check performance implications
+
+### Post-Review
+- [ ] Provide specific recommendations for improvements
+- [ ] Suggest appropriate test cases
+- [ ] Identify potential security concerns
+- [ ] Recommend documentation updates
+
+## 🔗 **Related Resources**
+- [OpenSSL Security Policy](https://www.openssl.org/policies/secpolicy.html)
+- [FIPS 140-3 Validation](https://csrc.nist.gov/projects/cryptographic-module-validation-program)
+- [OpenSSL Coding Style](https://www.openssl.org/policies/codingstyle.html)
+- [Conan Package Guidelines](https://docs.conan.io/2/)

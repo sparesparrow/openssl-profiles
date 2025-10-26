@@ -1,0 +1,189 @@
+---
+globs: ["**/*.md", "**/*.rst", "**/*.txt", "**/docs/**"]
+description: "OpenSSL-specific documentation prompt template"
+alwaysApply: false
+---
+
+# OpenSSL Documentation Writer
+
+Please write comprehensive documentation for the following OpenSSL {{doc_type}}:
+
+**Title:** {{title}}
+**Description:** {{description}}
+**OpenSSL Version:** {{openssl_version}}
+**Compliance Level:** {{compliance_level}}
+**Target Audience:** {{target_audience}}
+
+## 📚 **OpenSSL-Specific Documentation Requirements**
+
+### Document Type: {{doc_type}}
+- **API Documentation**: OpenSSL function references, parameter descriptions, return values
+- **FIPS Documentation**: FIPS 140-3 compliance guides, validation procedures
+- **Conan Documentation**: Package usage, dependency management, build instructions
+- **Architecture Documentation**: System design, component relationships, data flow
+- **Testing Documentation**: Test procedures, validation criteria, CI/CD integration
+
+### OpenSSL Version Context: {{openssl_version}}
+- **4.0.3**: Latest stable release with full FIPS 140-3 support
+- **3.6.0**: Previous stable release with FIPS 140-2 support
+- **3.4.1**: LTS release for long-term support
+
+### Compliance Level: {{compliance_level}}
+- **fips140-3**: FIPS 140-3 Level 1 compliance requirements
+- **common-criteria**: Common Criteria evaluation requirements
+- **none**: Standard OpenSSL without compliance requirements
+
+### Target Audience: {{target_audience}}
+- **developers**: Software developers using OpenSSL
+- **security**: Security professionals and auditors
+- **compliance**: Compliance officers and validators
+- **end-users**: End users of OpenSSL applications
+
+## 🏗️ **Documentation Structure**
+
+### 1. Overview Section
+```markdown
+# {{title}}
+
+## Purpose
+Brief description of the {{doc_type}} and its role in the OpenSSL ecosystem.
+
+## Prerequisites
+- OpenSSL {{openssl_version}} or later
+- {{compliance_level}} compliance requirements (if applicable)
+- Required dependencies and tools
+
+## Quick Start
+Basic usage examples and common patterns.
+```
+
+### 2. Technical Details
+```markdown
+## Technical Implementation
+
+### Architecture
+- Component relationships
+- Data flow diagrams
+- Integration points
+
+### API Reference
+- Function signatures
+- Parameter descriptions
+- Return values and error codes
+- Usage examples
+
+### Configuration
+- Build configuration options
+- Runtime configuration
+- Environment variables
+- Conan package options
+```
+
+### 3. Security Considerations
+```markdown
+## Security Considerations
+
+### FIPS Compliance
+- FIPS 140-3 requirements
+- Approved algorithms
+- Key management procedures
+- Validation requirements
+
+### Best Practices
+- Secure coding guidelines
+- Common vulnerabilities
+- Security testing procedures
+- Audit recommendations
+```
+
+### 4. Examples and Tutorials
+```markdown
+## Examples and Tutorials
+
+### Basic Usage
+```c
+// Example code with proper error handling
+#include <openssl/evp.h>
+#include <openssl/err.h>
+
+int main() {
+    // Implementation example
+    return 0;
+}
+```
+
+### Advanced Usage
+- Complex scenarios
+- Performance optimization
+- Integration patterns
+- Troubleshooting guides
+```
+
+## 🔧 **OpenSSL-Specific Content Guidelines**
+
+### Code Examples
+- Include proper error checking for all OpenSSL API calls
+- Use FIPS-compliant algorithms when applicable
+- Include resource cleanup in examples
+- Provide both basic and advanced usage patterns
+
+### Security Documentation
+- Document FIPS 140-3 compliance requirements
+- Include security best practices
+- Provide vulnerability mitigation strategies
+- Include audit and validation procedures
+
+### Conan Integration
+- Document package dependencies
+- Include build configuration examples
+- Provide usage patterns for different scenarios
+- Include troubleshooting for common issues
+
+## 📋 **Documentation Checklist**
+
+### Content Quality
+- [ ] Clear and concise explanations
+- [ ] Comprehensive code examples
+- [ ] Step-by-step instructions
+- [ ] Troubleshooting section
+- [ ] Best practices included
+
+### OpenSSL Specifics
+- [ ] FIPS compliance considerations
+- [ ] Security best practices
+- [ ] Performance optimization tips
+- [ ] Common pitfalls and solutions
+- [ ] Integration with Conan ecosystem
+
+### Technical Accuracy
+- [ ] API references are current
+- [ ] Examples compile and run
+- [ ] Version compatibility noted
+- [ ] Dependencies properly documented
+- [ ] Error handling examples included
+
+## 🎯 **Target Audience Considerations**
+
+### For Developers
+- Focus on practical usage examples
+- Include performance considerations
+- Provide debugging guidance
+- Include integration patterns
+
+### For Security Professionals
+- Emphasize security implications
+- Include compliance requirements
+- Provide audit procedures
+- Include vulnerability assessments
+
+### For Compliance Officers
+- Focus on regulatory requirements
+- Include validation procedures
+- Provide documentation templates
+- Include audit checklists
+
+## 🔗 **Related Resources**
+- [OpenSSL Documentation](https://www.openssl.org/docs/)
+- [FIPS 140-3 Standard](https://csrc.nist.gov/publications/detail/fips/140/3/final)
+- [Conan Documentation](https://docs.conan.io/2/)
+- [OpenSSL Security Policy](https://www.openssl.org/policies/secpolicy.html)

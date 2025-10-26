@@ -1,0 +1,156 @@
+---
+globs: ["**/test/**", "**/tests/**", "**/test_package/**", "**/*.log"]
+description: "OpenSSL-specific bug analysis prompt template"
+alwaysApply: false
+---
+
+# OpenSSL Bug Analyzer
+
+Please analyze this OpenSSL bug report and provide a detailed investigation:
+
+**Bug Description:** {{bugDescription}}
+**Error Message:** {{errorMessage}}
+**Environment:** {{environment}}
+**Steps to Reproduce:** {{stepsToReproduce}}
+
+## 🔍 **OpenSSL-Specific Analysis Context**
+
+### Component Analysis
+- **OpenSSL Component**: {{openssl_component}} (core|ssl|crypto|fips|conan)
+- **FIPS Impact**: {{fips_impact}} (critical|high|medium|low|none)
+- **Conan Context**: {{conan_context}} (package|build|dependency|cache)
+- **Security Classification**: {{security_classification}} (critical|high|medium|low)
+
+### Environment Details
+- **Operating System**: {{environment}}
+- **OpenSSL Version**: {{openssl_version}}
+- **Conan Version**: {{conan_version}}
+- **Build Type**: {{build_type}} (release|debug|fips)
+
+## 🚨 **OpenSSL-Specific Bug Categories**
+
+### Cryptographic Issues
+- **Algorithm Problems**: Incorrect algorithm selection, FIPS compliance violations
+- **Key Management**: Key generation, storage, or cleanup issues
+- **Random Number Generation**: Insufficient entropy, predictable randomness
+- **Cipher Issues**: Incorrect cipher usage, padding problems
+
+### Memory Management
+- **Buffer Overflows**: Stack or heap buffer overflows
+- **Memory Leaks**: Unfreed OpenSSL resources (EVP contexts, BIOs, etc.)
+- **Use-After-Free**: Accessing freed OpenSSL objects
+- **Double-Free**: Multiple free operations on same object
+
+### Thread Safety
+- **Race Conditions**: Concurrent access to OpenSSL objects
+- **Lock Issues**: Missing or incorrect locking mechanisms
+- **Static Variables**: Unsafe use of static variables in multi-threaded code
+
+### FIPS Compliance
+- **Algorithm Violations**: Use of non-FIPS approved algorithms
+- **Key Management**: Improper FIPS key handling
+- **Validation Failures**: FIPS validation process failures
+- **Certificate Issues**: FIPS certificate validation problems
+
+### Conan Package Issues
+- **Dependency Resolution**: Package dependency conflicts
+- **Build Failures**: Compilation or linking errors
+- **Configuration Problems**: Incorrect package configuration
+- **Cache Issues**: Conan cache corruption or conflicts
+
+## 🔬 **Root Cause Analysis**
+
+### 1. **Immediate Cause**
+- What directly caused the bug?
+- Which OpenSSL API or function failed?
+- What was the specific error condition?
+
+### 2. **Underlying Cause**
+- Why did the OpenSSL API fail?
+- What configuration or setup issue led to this?
+- Are there missing dependencies or incorrect versions?
+
+### 3. **Systemic Issues**
+- Are there broader architectural problems?
+- Is this a pattern that could affect other components?
+- Are there missing safeguards or validations?
+
+## 🛠️ **Potential Solutions**
+
+### Immediate Fixes
+- **Code Changes**: Specific code modifications needed
+- **Configuration Updates**: Changes to build or runtime configuration
+- **Dependency Updates**: Package version updates or additions
+- **Environment Changes**: System or environment modifications
+
+### Long-term Solutions
+- **Architecture Improvements**: Structural changes to prevent similar issues
+- **Testing Enhancements**: Additional test coverage for this scenario
+- **Documentation Updates**: Clarify usage patterns and requirements
+- **Monitoring**: Add monitoring to detect similar issues
+
+## 🧪 **Testing Recommendations**
+
+### Unit Tests
+- **Specific Test Cases**: Tests for the exact failure scenario
+- **Edge Cases**: Tests for boundary conditions and error states
+- **FIPS Tests**: FIPS compliance validation tests
+- **Performance Tests**: Tests for performance impact
+
+### Integration Tests
+- **Cross-Platform Tests**: Tests on different operating systems
+- **Version Compatibility**: Tests with different OpenSSL versions
+- **Conan Package Tests**: Tests for package consumption scenarios
+- **Security Tests**: Penetration testing and vulnerability assessment
+
+### Regression Tests
+- **Automated Testing**: CI/CD pipeline tests
+- **Manual Testing**: Manual verification procedures
+- **Load Testing**: Stress testing for performance issues
+- **Security Testing**: Regular security audits
+
+## 🚨 **Security Implications**
+
+### FIPS Impact Assessment
+- **Compliance Status**: Does this affect FIPS compliance?
+- **Certificate Impact**: Does this affect FIPS certificates?
+- **Validation Impact**: Does this affect FIPS validation?
+- **Mitigation Required**: What security measures are needed?
+
+### Vulnerability Assessment
+- **Exploitability**: How easily can this be exploited?
+- **Impact Scope**: What systems or data are affected?
+- **Attack Vectors**: How could an attacker exploit this?
+- **Defense Measures**: What defenses can be implemented?
+
+## 📊 **Priority Assessment**
+
+### Critical Priority
+- **Security Vulnerabilities**: FIPS compliance violations, security exploits
+- **Data Corruption**: Issues that could corrupt or lose data
+- **System Crashes**: Issues that cause system instability
+- **Build Failures**: Issues that prevent successful builds
+
+### High Priority
+- **Performance Issues**: Significant performance degradation
+- **Functionality Loss**: Loss of core functionality
+- **Integration Problems**: Issues with package integration
+- **Documentation Gaps**: Missing or incorrect documentation
+
+### Medium Priority
+- **Minor Bugs**: Non-critical functionality issues
+- **Usability Problems**: User experience issues
+- **Code Quality**: Code quality improvements
+- **Optimization**: Performance optimizations
+
+### Low Priority
+- **Cosmetic Issues**: UI or output formatting issues
+- **Documentation Updates**: Minor documentation improvements
+- **Code Cleanup**: Code refactoring and cleanup
+- **Feature Requests**: New feature requests
+
+## 🔗 **Related Resources**
+- [OpenSSL Security Advisories](https://www.openssl.org/news/vulnerabilities.html)
+- [FIPS 140-3 Validation](https://csrc.nist.gov/projects/cryptographic-module-validation-program)
+- [Conan Issue Tracker](https://github.com/conan-io/conan/issues)
+- [OpenSSL Bug Reports](https://github.com/openssl/openssl/issues)

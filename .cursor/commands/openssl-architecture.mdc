@@ -1,0 +1,193 @@
+---
+globs: ["**/ARCHITECTURE.md", "**/architecture/**", "**/docs/architecture/**"]
+description: "OpenSSL-specific architecture review prompt template"
+alwaysApply: false
+---
+
+# OpenSSL Architecture Reviewer
+
+Please review this OpenSSL system architecture and provide feedback:
+
+**System Overview:** {{systemOverview}}
+**Architecture Diagram/Description:** {{architectureDescription}}
+**Requirements:** {{requirements}}
+**Constraints:** {{constraints}}
+
+## 🏗️ **OpenSSL-Specific Architecture Context**
+
+### Layer Analysis
+- **Architecture Layer**: {{layer}} (foundation|tooling|domain|consumer)
+- **Dependency Flow**: {{dependency_flow}} (python_requires|requires|build_requires)
+- **Conan Profile**: {{conan_profile}} (release|debug|fips|testing)
+- **Distribution Target**: {{distribution_target}} (cloudsmith|local|ci)
+
+### OpenSSL Ecosystem Context
+- **OpenSSL Version**: {{openssl_version}}
+- **FIPS Compliance**: {{fips_compliance}} (true|false)
+- **Conan Integration**: {{conan_integration}} (true|false)
+- **Security Requirements**: {{security_requirements}}
+
+## 🔍 **OpenSSL-Specific Evaluation Criteria**
+
+### 1. **Scalability**
+- **Component Scalability**: How well do individual components scale?
+- **Dependency Scalability**: Can the dependency chain handle growth?
+- **Build Scalability**: Does the build system scale with complexity?
+- **Distribution Scalability**: Can packages be distributed efficiently?
+
+### 2. **Maintainability**
+- **Code Organization**: Is the code well-organized and modular?
+- **Documentation**: Is the architecture well-documented?
+- **Testing**: Are there comprehensive tests for all components?
+- **Versioning**: Is versioning strategy clear and consistent?
+
+### 3. **Security**
+- **FIPS Compliance**: Does the architecture support FIPS 140-3 compliance?
+- **Security Boundaries**: Are security boundaries clearly defined?
+- **Key Management**: Is key management properly architected?
+- **Audit Trail**: Are security events properly logged and auditable?
+
+### 4. **Performance**
+- **Build Performance**: Is the build process optimized?
+- **Runtime Performance**: Are there performance bottlenecks?
+- **Memory Usage**: Is memory usage optimized?
+- **Caching Strategy**: Is caching properly implemented?
+
+### 5. **Reliability**
+- **Error Handling**: Is error handling comprehensive?
+- **Fault Tolerance**: Can the system handle component failures?
+- **Recovery**: Are there recovery mechanisms in place?
+- **Monitoring**: Is the system properly monitored?
+
+### 6. **Cost-effectiveness**
+- **Build Costs**: Are build costs optimized?
+- **Maintenance Costs**: Are maintenance costs reasonable?
+- **Infrastructure Costs**: Are infrastructure costs minimized?
+- **Development Costs**: Are development costs optimized?
+
+## 🏛️ **OpenSSL Architecture Patterns**
+
+### Layered Architecture
+```
+┌─────────────────────────────────────┐
+│           Consumer Layer            │
+│  (Applications using OpenSSL)      │
+├─────────────────────────────────────┤
+│           Domain Layer              │
+│  (openssl - Core Library)          │
+├─────────────────────────────────────┤
+│           Tooling Layer             │
+│  (openssl-tools - Build System)    │
+├─────────────────────────────────────┤
+│         Foundation Layer            │
+│  (openssl-conan-base, fips-policy) │
+└─────────────────────────────────────┘
+```
+
+### Dependency Flow
+```
+openssl-conan-base (v1.0.1)
+    ↓ python_requires
+openssl-fips-policy (v140-3.2)
+    ↓ python_requires
+openssl-tools (v1.2.4)
+    ↓ python_requires
+openssl (v4.0.3)
+    ↓ requires
+Consumer Applications
+```
+
+### Conan Package Architecture
+```
+┌─────────────────────────────────────┐
+│         Conan Registry              │
+│    (Cloudsmith Distribution)       │
+├─────────────────────────────────────┤
+│         Package Cache               │
+│    (Local + Remote Cache)          │
+├─────────────────────────────────────┤
+│         Build System                │
+│    (CMake + Conan + Python)        │
+├─────────────────────────────────────┤
+│         Source Code                 │
+│    (OpenSSL + Custom Components)   │
+└─────────────────────────────────────┘
+```
+
+## 🔧 **OpenSSL-Specific Recommendations**
+
+### Foundation Layer Improvements
+- **Utility Functions**: Ensure all utility functions are properly abstracted
+- **FIPS Integration**: Verify FIPS policy integration is seamless
+- **SBOM Generation**: Ensure SBOM generation is automated and comprehensive
+- **Profile Management**: Optimize Conan profile management
+
+### Tooling Layer Improvements
+- **Build Orchestration**: Optimize build orchestration for performance
+- **Dependency Management**: Improve dependency resolution and caching
+- **Cross-Platform Support**: Enhance cross-platform build capabilities
+- **CI/CD Integration**: Streamline CI/CD pipeline integration
+
+### Domain Layer Improvements
+- **Component Separation**: Ensure proper separation of libcrypto and libssl
+- **API Design**: Optimize API design for usability and performance
+- **FIPS Support**: Ensure comprehensive FIPS 140-3 support
+- **Documentation**: Maintain comprehensive API documentation
+
+### Consumer Layer Improvements
+- **Integration Patterns**: Provide clear integration patterns
+- **Error Handling**: Ensure consistent error handling across components
+- **Performance**: Optimize performance for common use cases
+- **Security**: Implement security best practices
+
+## 📊 **Architecture Quality Metrics**
+
+### Code Quality Metrics
+- **Cyclomatic Complexity**: Keep complexity low for maintainability
+- **Test Coverage**: Maintain high test coverage (>90%)
+- **Documentation Coverage**: Ensure all public APIs are documented
+- **Code Duplication**: Minimize code duplication
+
+### Performance Metrics
+- **Build Time**: Optimize build time for CI/CD
+- **Package Size**: Minimize package size for distribution
+- **Memory Usage**: Optimize memory usage for runtime
+- **CPU Usage**: Optimize CPU usage for performance
+
+### Security Metrics
+- **Vulnerability Count**: Track and minimize vulnerabilities
+- **FIPS Compliance**: Maintain FIPS compliance status
+- **Security Testing**: Ensure comprehensive security testing
+- **Audit Readiness**: Maintain audit readiness
+
+## 🚀 **Implementation Roadmap**
+
+### Phase 1: Foundation (Weeks 1-2)
+- [ ] Review and optimize foundation layer architecture
+- [ ] Implement comprehensive FIPS integration
+- [ ] Set up automated SBOM generation
+- [ ] Optimize Conan profile management
+
+### Phase 2: Tooling (Weeks 3-4)
+- [ ] Enhance build orchestration system
+- [ ] Improve dependency management
+- [ ] Implement cross-platform testing
+- [ ] Optimize CI/CD pipeline
+
+### Phase 3: Domain (Weeks 5-6)
+- [ ] Refactor component separation
+- [ ] Optimize API design
+- [ ] Enhance FIPS support
+- [ ] Improve documentation
+
+### Phase 4: Consumer (Weeks 7-8)
+- [ ] Develop integration patterns
+- [ ] Implement error handling standards
+- [ ] Optimize performance
+- [ ] Enhance security measures
+
+## 🔗 **Related Resources**
+- [OpenSSL Architecture](https://www.openssl.org/docs/)
+- [Conan Architecture](https://docs.conan.io/2/)
+- [FIPS 140-3 Architecture](https://csrc.nist.gov/publications/detail/fips/140/3/final)
+- [Software Architecture Patterns](https://www.oreilly.com/library/view/software-architecture-patterns/9781491971437/)
