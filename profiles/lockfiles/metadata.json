@@ -1,0 +1,44 @@
+{
+  "generated_at": "2025-10-24T05:37:14Z",
+  "configurations": [
+    {
+      "profile": "linux-gcc11",
+      "shared": "True",
+      "fips": "False",
+      "name": "linux-gcc-shared"
+    },
+    {
+      "profile": "linux-gcc11",
+      "shared": "False",
+      "fips": "False",
+      "name": "linux-gcc-static"
+    },
+    {
+      "profile": "linux-gcc11",
+      "shared": "False",
+      "fips": "True",
+      "name": "linux-gcc-fips"
+    },
+    {
+      "profile": "linux-clang15",
+      "shared": "True",
+      "fips": "False",
+      "name": "linux-clang-shared"
+    },
+    {
+      "profile": "linux-clang15",
+      "shared": "False",
+      "fips": "False",
+      "name": "linux-clang-static"
+    },
+    {
+      "profile": "linux-clang15",
+      "shared": "False",
+      "fips": "True",
+      "name": "linux-clang-fips"
+    }
+  ],
+  "total_lockfiles": 6,
+  "openssl_version": "4.0.0-dev",
+  "note": "These lockfiles ensure reproducible builds across all supported platforms and configurations"
+}

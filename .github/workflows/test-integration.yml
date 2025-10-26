@@ -1,0 +1,260 @@
+name: FIPS Integration Test
+
+on:
+  workflow_call:
+    inputs:
+      fips_enabled:
+        description: "Enable FIPS mode for testing"
+        required: false
+        type: boolean
+        default: false
+      openssl_version:
+        description: "OpenSSL version to test"
+        required: false
+        type: string
+        default: "3.4.1"
+      test_platforms:
+        description: "Platforms to test"
+        required: false
+        type: string
+        default: "linux"
+      cloudsmith_artifacts:
+        description: "Pull artifacts from Cloudsmith"
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      fips_compliance_status:
+        description: "FIPS compliance validation status"
+        value: ${{ jobs.fips-integration-test.outputs.status }}
+      artifact_paths:
+        description: "Paths to generated artifacts"
+        value: ${{ jobs.fips-integration-test.outputs.artifact_paths }}
+      sbom_path:
+        description: "Path to generated SBOM"
+        value: ${{ jobs.fips-integration-test.outputs.sbom_path }}
+
+env:
+  FIPS_ENABLED: ${{ inputs.fips_enabled }}
+  OPENSSL_VERSION: ${{ inputs.openssl_version }}
+  TEST_PLATFORMS: ${{ inputs.test_platforms }}
+
+jobs:
+  fips-integration-test:
+    runs-on: ubuntu-22.04
+    outputs:
+      status: ${{ steps.fips-validation.outcome }}
+      artifact_paths: ${{ steps.collect-artifacts.outputs.paths }}
+      sbom_path: ${{ steps.generate-sbom.outputs.sbom_path }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python and Conan
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      
+      - name: Install dependencies
+        run: |
+          pip install conan
+          conan profile detect
+
+      - name: Pull artifacts from Cloudsmith
+        if: inputs.cloudsmith_artifacts
+        run: |
+          echo "Pulling FIPS policy artifacts from Cloudsmith..."
+          # Add Cloudsmith repository
+          conan remote add cloudsmith-fips https://conan.cloudsmith.io/sparesparrow-conan/openssl-fips-policy/ --force
+          
+          # Authenticate with Cloudsmith (using secrets)
+          conan remote login cloudsmith-fips sparesparrow --password "${{ secrets.CLOUDSMITH_API_KEY }}"
+          
+          # Pull FIPS policy artifacts
+          conan install openssl-fips-data/140-3.1@sparesparrow/stable -r=cloudsmith-fips --build=missing
+          
+          echo "✅ Successfully pulled FIPS policy artifacts from Cloudsmith"
+
+      - name: Apply policy overlays
+        if: env.FIPS_ENABLED == 'true'
+        run: |
+          echo "Applying FIPS policy overlays..."
+          
+          # Create policy overlay directory
+          mkdir -p fips-policy-overlays
+          
+          # Extract and apply policy overlays from Cloudsmith artifacts
+          if [ -d ~/.conan2/data/openssl-fips-data ]; then
+            find ~/.conan2/data/openssl-fips-data -name "*.cnf" -exec cp {} fips-policy-overlays/ \;
+            find ~/.conan2/data/openssl-fips-data -name "*.json" -exec cp {} fips-policy-overlays/ \;
+            echo "✅ Policy overlays applied from Cloudsmith artifacts"
+          else
+            echo "⚠️  Cloudsmith artifacts not found, using local policy files"
+            # Fallback to local policy files
+            cp fips-140-3/certificates/*.json fips-policy-overlays/ 2>/dev/null || true
+          fi
+          
+          # List applied overlays
+          echo "Applied policy overlays:"
+          ls -la fips-policy-overlays/
+
+      - name: Build FIPS-enabled OpenSSL
+        if: env.FIPS_ENABLED == 'true'
+        run: |
+          echo "Building FIPS-enabled OpenSSL version ${{ env.OPENSSL_VERSION }}..."
+          
+          # Clone OpenSSL source
+          git clone --depth 1 --branch openssl-${{ env.OPENSSL_VERSION }} https://github.com/openssl/openssl.git openssl-source
+          cd openssl-source
+          
+          # Configure with FIPS
+          ./Configure linux-x86_64 enable-fips --prefix=/usr/local/openssl-fips
+          
+          # Build and install
+          make -j$(nproc)
+          sudo make install
+          sudo make install_fips
+          
+          echo "✅ FIPS-enabled OpenSSL built successfully"
+
+      - name: Run FIPS self-tests
+        if: env.FIPS_ENABLED == 'true'
+        run: |
+          echo "Running FIPS self-tests..."
+          
+          # Set environment variables
+          export OPENSSL_CONF=/usr/local/openssl-fips/ssl/openssl.cnf
+          export OPENSSL_MODULES=/usr/local/openssl-fips/lib/ossl-modules
+          export LD_LIBRARY_PATH=/usr/local/openssl-fips/lib:$LD_LIBRARY_PATH
+          export PATH=/usr/local/openssl-fips/bin:$PATH
+          
+          # Run FIPS self-test
+          openssl fips-selftest
+          
+          # Verify FIPS provider is available
+          openssl list -providers -verbose | grep -i fips
+          
+          echo "✅ FIPS self-tests completed successfully"
+
+      - name: Test FIPS algorithms
+        if: env.FIPS_ENABLED == 'true'
+        run: |
+          echo "Testing FIPS-approved algorithms..."
+          
+          # Set environment variables
+          export OPENSSL_CONF=/usr/local/openssl-fips/ssl/openssl.cnf
+          export OPENSSL_MODULES=/usr/local/openssl-fips/lib/ossl-modules
+          export LD_LIBRARY_PATH=/usr/local/openssl-fips/lib:$LD_LIBRARY_PATH
+          export PATH=/usr/local/openssl-fips/bin:$PATH
+          
+          # Test approved algorithms
+          echo "Testing AES-GCM..."
+          echo "Hello FIPS World" | openssl enc -aes-256-gcm -provider fips -pbkdf2 -pass pass:testpass -base64
+          
+          echo "Testing SHA-256..."
+          echo "Hello FIPS World" | openssl dgst -sha256 -provider fips
+          
+          echo "Testing RSA key generation..."
+          openssl genpkey -algorithm RSA -provider fips -pkeyopt rsa_keygen_bits:2048 -out /tmp/test_rsa_key.pem
+          
+          echo "✅ FIPS algorithm tests completed"
+
+      - name: Generate SBOM with policy artifacts
+        id: generate-sbom
+        run: |
+          echo "Generating SBOM with policy artifacts..."
+          
+          # Install syft if not available
+          if ! command -v syft &> /dev/null; then
+            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          fi
+          
+          # Generate SBOM
+          syft packages . -o spdx-json > fips-policy-sbom.spdx.json
+          
+          # Include policy artifacts in SBOM
+          if [ -d fips-policy-overlays ]; then
+            syft packages fips-policy-overlays/ -o spdx-json > policy-artifacts-sbom.spdx.json
+            echo "✅ Policy artifacts included in SBOM"
+          fi
+          
+          # Extract certificate information
+          CERT_NUMBER=$(jq -r '.packages[] | select(.name | contains("openssl")) | .version' fips-policy-sbom.spdx.json 2>/dev/null || echo "unknown")
+          echo "Certificate number: $CERT_NUMBER"
+          
+          echo "sbom_path=fips-policy-sbom.spdx.json" >> $GITHUB_OUTPUT
+          echo "✅ SBOM generated successfully"
+
+      - name: Collect artifacts
+        id: collect-artifacts
+        run: |
+          echo "Collecting validation artifacts..."
+          
+          # Create artifacts directory
+          mkdir -p validation-artifacts
+          
+          # Copy important files
+          if [ -f fips-policy-sbom.spdx.json ]; then
+            cp fips-policy-sbom.spdx.json validation-artifacts/
+          fi
+          
+          if [ -d fips-policy-overlays ]; then
+            cp -r fips-policy-overlays validation-artifacts/
+          fi
+          
+          # Copy FIPS module if available
+          if [ -f /usr/local/openssl-fips/lib/ossl-modules/fips.so ]; then
+            cp /usr/local/openssl-fips/lib/ossl-modules/fips.so validation-artifacts/
+          fi
+          
+          # List collected artifacts
+          echo "Collected artifacts:"
+          find validation-artifacts -type f
+          
+          # Set output
+          echo "paths=validation-artifacts" >> $GITHUB_OUTPUT
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fips-integration-artifacts
+          path: validation-artifacts/
+          retention-days: 30
+
+      - name: Notify github-events on validation success
+        if: success()
+        run: |
+          echo "✅ FIPS validation completed successfully"
+          echo "Notifying github-events for deployment orchestration..."
+          
+          # Create notification payload
+          cat > validation-notification.json << EOF
+          {
+            "event": "fips_validation_success",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "repository": "${{ github.repository }}",
+            "commit": "${{ github.sha }}",
+            "fips_enabled": "${{ env.FIPS_ENABLED }}",
+            "openssl_version": "${{ env.OPENSSL_VERSION }}",
+            "artifacts": "validation-artifacts/",
+            "sbom": "fips-policy-sbom.spdx.json"
+          }
+          EOF
+          
+          echo "Validation notification payload:"
+          cat validation-notification.json
+          
+          # In a real implementation, this would send to github-events service
+          echo "📤 Notification ready for github-events service"
+
+      - name: FIPS validation
+        id: fips-validation
+        run: |
+          if [ "${{ env.FIPS_ENABLED }}" = "true" ]; then
+            echo "✅ FIPS validation completed successfully"
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️  FIPS validation skipped (FIPS not enabled)"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+          fi

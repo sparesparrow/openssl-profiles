@@ -1,0 +1,43 @@
+name: Build and Publish to Cloudsmith
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      conan_user:
+        description: "Conan user/organization"
+        required: false
+        default: "sparesparrow"
+      conan_channel:
+        description: "Conan channel"
+        required: false
+        default: "stable"
+
+env:
+  CONAN_USER: ${{ secrets.GITHUB_TOKEN_CONAN_USER || "sparesparrow" }}
+  CONAN_CHANNEL: ${{ github.event.inputs.conan_channel || "stable" }}
+  CONAN_REPOSITORY_NAME: ${{ secrets.GITHUB_ENV_CONAN_REPOSITORY_NAME || "${CONAN_USER}-conan" }}
+  CONAN_REPOSITORY_URL: ${{ secrets.GITHUB_ENV_CONAN_REPOSITORY_URL || "https://conan.cloudsmith.io/${CONAN_USER}-conan/openssl-conan/" }}
+  CLOUDSMITH_API_KEY: ${{ secrets.GITHUB_ENV_CLOUDSMITH_API_KEY || secrets.CLOUDSMITH_API_KEY }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install conan
+      - run: conan remote add ${CONAN_REPOSITORY_NAME} ${CONAN_REPOSITORY_URL} --force
+      - name: Set Conan user/channel environment
+        run: |
+          echo "CONAN_USER=$CONAN_USER" >> $GITHUB_ENV
+          echo "CONAN_CHANNEL=$CONAN_CHANNEL" >> $GITHUB_ENV
+      - run: conan create . --build=missing
+      - env:
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+        run: |
+          conan remote login ${CONAN_REPOSITORY_NAME} ${CONAN_USER} --password "$CLOUDSMITH_API_KEY"
+          conan upload "openssl-fips-data/*@${CONAN_USER}/${CONAN_CHANNEL}" -r=${CONAN_REPOSITORY_NAME} --confirm

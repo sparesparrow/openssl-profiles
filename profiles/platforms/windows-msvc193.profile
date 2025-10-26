@@ -6,5 +6,9 @@ compiler.version=193
 compiler.runtime=dynamic
 build_type=Release
 
+[options]
+shared=True
+fips=False
+
 [conf]
 tools.system.package_manager:mode=install

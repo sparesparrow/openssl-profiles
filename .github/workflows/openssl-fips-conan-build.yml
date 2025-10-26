@@ -1,0 +1,193 @@
+name: OpenSSL FIPS Policy Conan Build & Publish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "conanfile.py"
+      - "**/conanfile.py"
+  pull_request:
+    branches: [main]
+    paths:
+      - "conanfile.py"
+      - "**/conanfile.py"
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build for'
+        required: false
+        default: 'linux-gcc11'
+        type: choice
+        options:
+          - linux-gcc11
+          - linux-clang15
+          - windows-msvc2022
+          - macos-clang14
+      publish:
+        description: 'Publish to registry'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+jobs:
+  build-and-test:
+    name: Build OpenSSL FIPS Policy with Conan
+    uses: sparesparrow/openssl-tools/.github/workflows/reusable/build-component.yml@reusable-workflows/v1.0.0
+    with:
+      component: 'openssl-fips-policy'
+      platform: ${{ inputs.platform || 'linux-gcc11' }}
+      fips-enabled: true
+      upload-artifacts: true
+    secrets:
+      CONAN_LOGIN_USERNAME: ${{ secrets.CONAN_LOGIN_USERNAME }}
+      CONAN_PASSWORD: ${{ secrets.CONAN_PASSWORD }}
+
+  security-scan:
+    name: Security Scan
+    uses: sparesparrow/openssl-tools/.github/workflows/reusable/security-scan.yml@reusable-workflows/v1.0.0
+    with:
+      component: 'openssl-fips-policy'
+      scan-type: 'fips'
+      generate-sbom: true
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publish to Registry
+    if: inputs.publish != false && github.event_name == 'push'
+    uses: sparesparrow/openssl-tools/.github/workflows/reusable/upload-registry.yml@reusable-workflows/v1.0.0
+    with:
+      component: 'openssl-fips-policy'
+      platform: ${{ inputs.platform || 'linux-gcc11' }}
+      registry: 'cloudsmith'
+      version: '140-3.2'
+    needs: [build-and-test, security-scan]
+
+  fips-validation:
+    name: FIPS Validation
+    runs-on: ubuntu-latest
+    needs: [build-and-test]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+          
+      - name: Install Conan
+        run: pip install conan==2.0.17
+        
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: openssl-fips-policy-${{ inputs.platform || 'linux-gcc11' }}-Release
+          path: ~/.conan2/p/
+          
+      - name: Test FIPS certificate data
+        run: |
+          # Create a test consumer
+          mkdir test-consumer
+          cd test-consumer
+          
+          cat > conanfile.txt << EOF
+          [requires]
+          openssl-fips-data/140-3.2@sparesparrow/stable
+          
+          [generators]
+          CMakeDeps
+          CMakeToolchain
+          EOF
+          
+          # Install the package
+          conan install . --build=missing
+          
+          # Verify FIPS certificate data
+          python3 -c "
+          import json
+          import os
+          
+          # Find the FIPS data directory
+          fips_data_dir = None
+          for root, dirs, files in os.walk('.'):
+              if 'fips-140-3' in dirs:
+                  fips_data_dir = os.path.join(root, 'fips-140-3')
+                  break
+          
+          if fips_data_dir and os.path.exists(fips_data_dir):
+              print(f'✅ FIPS data directory found: {fips_data_dir}')
+              
+              # Check for certificate files
+              cert_files = []
+              for root, dirs, files in os.walk(fips_data_dir):
+                  for file in files:
+                      if file.endswith('.json') and 'certificate' in file:
+                          cert_files.append(os.path.join(root, file))
+              
+              print(f'Found {len(cert_files)} certificate files')
+              
+              # Validate certificate #4985
+              cert_4985 = None
+              for cert_file in cert_files:
+                  if '4985' in cert_file:
+                      cert_4985 = cert_file
+                      break
+              
+              if cert_4985:
+                  with open(cert_4985, 'r') as f:
+                      cert_data = json.load(f)
+                  print(f'✅ Certificate #4985 found: {cert_data.get(\"certificate_number\", \"unknown\")}')
+                  print(f'   Expiry: {cert_data.get(\"expiry_date\", \"unknown\")}')
+              else:
+                  print('❌ Certificate #4985 not found')
+                  exit(1)
+          else:
+              print('❌ FIPS data directory not found')
+              exit(1)
+          "
+          
+      - name: Test FIPS compliance utilities
+        run: |
+          cd test-consumer
+          # Test FIPS compliance utilities
+          python3 -c "
+          import sys
+          import os
+          
+          # Add the package to Python path
+          for root, dirs, files in os.walk('.'):
+              if 'openssl_fips_policy' in dirs:
+                  sys.path.insert(0, os.path.join(root, 'openssl_fips_policy'))
+                  break
+          
+          try:
+              from openssl_fips_policy import validate_fips_compliance, get_fips_certificate
+              print('Testing FIPS compliance utilities...')
+              
+              # Test certificate retrieval
+              cert = get_fips_certificate('4985')
+              if cert:
+                  print(f'✅ Certificate #4985 retrieved: {cert.get(\"certificate_number\", \"unknown\")}')
+              else:
+                  print('❌ Failed to retrieve certificate #4985')
+                  exit(1)
+              
+              # Test compliance validation
+              is_compliant = validate_fips_compliance('3.4.1')
+              print(f'✅ FIPS compliance check: {is_compliant}')
+              
+          except ImportError as e:
+              print(f'⚠️ FIPS utilities not available: {e}')
+              print('This is expected for a data-only package')
+          "

@@ -6,6 +6,10 @@ compiler.version=15
 compiler.libcxx=libc++
 build_type=Release
 
+[options]
+shared=True
+fips=False
+
 [conf]
 tools.system.package_manager:mode=install
 

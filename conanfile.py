@@ -1,17 +1,19 @@
 from conan import ConanFile
 from conan.tools.files import copy
+from conan.tools.build import can_run
 import os
 
 class OpenSSLProfilesConan(ConanFile):
     name = "openssl-profiles"
-    version = "2.0.1"
+    version = "2.0.2"
     package_type = "python-require"
     description = "Conan 2.x python_requires package providing OpenSSL build profiles and FIPS 140-3 policy integration"
     license = "MIT"
     url = "https://github.com/sparesparrow/openssl-profiles"
     homepage = "https://github.com/sparesparrow/openssl-profiles"
     topics = ("openssl", "conan", "profiles", "fips", "cryptography")
-    exports_sources = "profiles/*", "fips/*", "config/*", "openssl_profiles/*"
+    exports_sources = "profiles/*", "fips/*", "config/*", "scripts/*"
+    settings = "os", "compiler", "build_type", "arch"
 
     def layout(self):
         """Define the package layout for Conan 2.x"""
@@ -34,8 +36,8 @@ class OpenSSLProfilesConan(ConanFile):
              dst=os.path.join(self.package_folder, "config"))
 
         # Copy Python modules
-        copy(self, "**", src=os.path.join(self.source_folder, "openssl_profiles"),
-             dst=os.path.join(self.package_folder, "openssl_profiles"))
+        copy(self, "**", src=os.path.join(self.source_folder, "scripts"),
+             dst=os.path.join(self.package_folder, "scripts"))
 
     def package_info(self):
         """Package information for consumers"""
@@ -43,8 +45,10 @@ class OpenSSLProfilesConan(ConanFile):
         self.cpp_info.bindirs = []
         self.cpp_info.libdirs = []
         
-        # Set Python path for the openssl_profiles module
-        self.env_info.PYTHONPATH.append(os.path.join(self.package_folder, "openssl_profiles"))
+        # Set Python path for the scripts module
+        scripts_path = os.path.join(self.package_folder, "scripts")
+        self.buildenv_info.prepend_path("PYTHONPATH", scripts_path)
+        self.runenv_info.prepend_path("PYTHONPATH", scripts_path)
         
         # Provide information about available profiles
         profiles_path = os.path.join(self.package_folder, "profiles")
@@ -55,3 +59,24 @@ class OpenSSLProfilesConan(ConanFile):
         fips_path = os.path.join(self.package_folder, "fips")
         if os.path.exists(fips_path):
             self.output.info(f"FIPS 140-3 data available at: {fips_path}")
+
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+
+    def test(self):
+        if can_run(self):
+            # Test that profiles can be loaded
+            profiles_base = self.python_requires["openssl-profiles"].module
+
+            # Test FIPS functionality
+            if hasattr(profiles_base, 'apply_fips_profile'):
+                print("✅ FIPS integration available")
+            else:
+                raise Exception("❌ FIPS integration missing")
+
+            print("✅ openssl-profiles test passed")
+
+
+            print("✅ openssl-profiles test passed")
+
+

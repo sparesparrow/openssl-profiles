@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "conan-package-manager": {
+      "command": "conan",
+      "args": ["server", "--mcp"],
+      "env": {
+        "CONAN_USER_HOME": "${workspaceFolder}/.conan"
+      },
+      "description": "Conan package management with MCP support for OpenSSL dependencies"
+    }
+  }
+}

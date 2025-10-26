@@ -1,0 +1,77 @@
+name: FIPS 140-3 Validation Matrix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  fips-validation:
+    name: FIPS Validation ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            profile: linux-gcc11
+          - os: ubuntu-24.04
+            profile: linux-gcc13
+          - os: windows-2022
+            profile: windows-vs2022
+          - os: macos-14
+            profile: macos-clang
+
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start timing
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install conan
+
+      - name: Setup Conan
+        run: conan profile detect
+
+      - name: Build FIPS-enabled OpenSSL
+        run: ./scripts/build-fips-openssl.sh 3.0.8 ${{ matrix.profile }}
+
+      - name: Validate FIPS module
+        run: ./scripts/validate-fips-module.sh
+
+      - name: Test algorithm restrictions
+        run: ./scripts/test-algorithm-restrictions.sh
+
+      - name: Test deprecated API rejection
+        run: ./scripts/test-deprecated-apis.sh
+
+      - name: Check runtime performance
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          if [ $DURATION -gt 480 ]; then
+            echo "ERROR: Exceeded 8min limit"
+            exit 1
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fips-results-${{ matrix.os }}
+          path: |
+            fipsmodule-*.cnf
+            .fips-env

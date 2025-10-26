@@ -39,8 +39,8 @@ jobs:
       - name: Run Bandit security scan
         run: |
           echo "🔍 Running Bandit security scan..."
-          bandit -r openssl_profiles/ -f json -o bandit-report.json || true
-          bandit -r openssl_profiles/ -f txt || true
+          bandit -r scripts/ -f json -o bandit-report.json || true
+          bandit -r scripts/ -f txt || true
 
       - name: Run Safety vulnerability scan
         run: |
@@ -59,7 +59,7 @@ jobs:
           echo "🔍 Scanning for secrets..."
           
           # Check for hardcoded secrets
-          if grep -r -i "password\|secret\|key\|token" openssl_profiles/ --exclude-dir=__pycache__ | grep -v "def\|class\|import\|#"; then
+          if grep -r -i "password\|secret\|key\|token" scripts/ --exclude-dir=__pycache__ | grep -v "def\|class\|import\|#"; then
             echo "⚠️  Potential secrets found in code"
           else
             echo "✅ No obvious secrets found in code"

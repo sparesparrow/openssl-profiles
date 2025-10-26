@@ -2,8 +2,9 @@
 os=Linux
 arch=x86_64
 compiler=clang
-compiler.version=14
+compiler.version=15
 compiler.libcxx=libstdc++11
+compiler.cppstd=gnu17
 build_type=Release
 
 [options]
@@ -11,6 +12,5 @@ shared=True
 fips=False
 
 [conf]
-tools.system.package_manager:mode=install
-tools.system.package_manager:sudo=True
-
+tools.cmake.cmaketoolchain:generator=Ninja
+tools.gnu:make_program=ninja

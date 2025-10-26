@@ -35,6 +35,9 @@ class TestPackageConan(ConanFile):
 
         # Test Python module import (this will fail in test_package but that's expected)
         try:
+            import sys
+            scripts_path = os.path.join(self.dependencies[self.tested_reference_str].package_folder, "scripts")
+            sys.path.insert(0, scripts_path)
             import openssl_profiles
             self.output.success("openssl_profiles module imported successfully")
         except ImportError as e:
